@@ -1,0 +1,96 @@
+/* Identifiers Section Styles */
+
+.identifiers-heading {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.identifiers-container {
+    background-color: var(--surface-alt);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border);
+}
+
+.identifiers-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.identifiers-table th {
+    width: 150px;
+    min-width: 150px;
+    text-align: left;
+    padding: 0.75rem 1rem 0.75rem 0;
+    color: var(--text-secondary);
+    font-weight: 500;
+    vertical-align: top;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.identifiers-table td {
+    padding: 0.75rem 0;
+    color: var(--text-primary);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.identifiers-table tr:last-child td,
+.identifiers-table tr:last-child th {
+    border-bottom: none;
+}
+
+.datasets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.dataset-item {
+    font-size: 0.95rem;
+}
+
+.dataset-item a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.dataset-item a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .identifiers-table th,
+    .identifiers-table td {
+        display: block;
+        width: 100%;
+    }
+    
+    .identifiers-table th {
+        padding-bottom: 0.25rem;
+    }
+    
+    .identifiers-table td {
+        padding-top: 0.25rem;
+        padding-bottom: 1rem;
+    }
+    
+    .identifiers-table tr {
+        margin-bottom: 1rem;
+        display: block;
+        border-bottom: 1px solid var(--border-light);
+    }
+    
+    .identifiers-table tr:last-child {
+        border-bottom: none;
+    }
+} 

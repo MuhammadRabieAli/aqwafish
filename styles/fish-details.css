@@ -1,4 +1,3 @@
-
 /* Breadcrumb */
 .breadcrumb {
     background: var(--surface);
@@ -57,17 +56,62 @@
     position: relative;
 }
 
+.main-image-link {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px var(--shadow);
+}
+
 .main-image {
     width: 100%;
     height: 400px;
     object-fit: cover;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 8px 32px var(--shadow);
     transition: transform var(--transition-normal);
 }
 
-.main-image:hover {
-    transform: scale(1.02);
+.main-image-link:hover .main-image {
+    transform: scale(1.05);
+}
+
+.image-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.main-image-link:hover .image-overlay {
+    opacity: 1;
+}
+
+.image-count {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--font-size-sm);
+}
+
+.view-all {
+    background: var(--primary-color);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    transition: background var(--transition-fast);
+}
+
+.main-image-link:hover .view-all {
+    background: var(--primary-hover);
 }
 
 .image-counter {
@@ -115,6 +159,17 @@
 
 .gallery-nav.next {
     right: var(--spacing-md);
+}
+
+.no-image .placeholder-image {
+    width: 100%;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    border-radius: var(--radius-lg);
 }
 
 .thumbnail-strip {
@@ -322,6 +377,63 @@
     gap: var(--spacing-lg);
 }
 
+/* Identifiers Form Section */
+.identifiers-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.form-intro {
+    margin-top: -0.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.dataset-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dataset-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.dataset-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.add-dataset, .remove-dataset {
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .dataset-fields {
+        flex-direction: row;
+        gap: 0.75rem;
+    }
+    
+    .dataset-code {
+        flex: 0 0 30%;
+    }
+    
+    .dataset-name {
+        flex: 0 0 40%;
+    }
+    
+    .dataset-url {
+        flex: 0 0 30%;
+    }
+}
+
 .related-card {
     background: var(--background);
     border: 1px solid var(--border);
@@ -426,6 +538,11 @@
     
     .related-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .identifiers-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 }
 

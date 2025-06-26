@@ -44,11 +44,11 @@ $page_num = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 10;
 $offset = ($page_num - 1) * $per_page;
 
-$sql = "SELECT f.*, u.name as submitter_name, COUNT(fi.id) AS image_count, 
-        (SELECT image_path FROM fish_images WHERE fish_id = f.id LIMIT 1) AS image_path
+$sql = "SELECT f.*, u.name as submitter_name, 
+        (SELECT COUNT(*) FROM fish_images WHERE fish_id = f.id) AS image_count, 
+        (SELECT image_path FROM fish_images WHERE fish_id = f.id ORDER BY is_primary DESC LIMIT 1) AS image_path
         FROM fish f 
-        LEFT JOIN users u ON f.submitted_by = u.id
-        LEFT JOIN fish_images fi ON f.id = fi.fish_id";
+        LEFT JOIN users u ON f.submitted_by = u.id";
 
 $where = [];
 $params = [];
@@ -62,22 +62,26 @@ if (!empty($where)) {
     $sql .= " WHERE " . implode(" AND ", $where);
 }
 
-$sql .= " GROUP BY f.id ORDER BY f.created_at DESC LIMIT ?, ?";
+$sql .= " ORDER BY f.created_at DESC LIMIT ?, ?";
 $params[] = $offset;
 $params[] = $per_page;
 
 $stmt = mysqli_prepare($conn, $sql);
 
 if (!empty($params)) {
-    $types = str_repeat('s', count($params) - 2) . 'ii';
-    $stmt->bind_param($types, ...$params);
+    $types = '';
+    if (count($params) > 2) {
+        $types = str_repeat('s', count($params) - 2);
+    }
+    $types .= 'ii';
+    mysqli_stmt_bind_param($stmt, $types, ...$params);
 }
 
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 
 // Get total count for pagination
-$count_sql = "SELECT COUNT(*) as count FROM fish";
+$count_sql = "SELECT COUNT(*) as count FROM fish f";
 if (!empty($where)) {
     $count_sql .= " WHERE " . implode(" AND ", $where);
 }
@@ -184,7 +188,7 @@ include '../includes/header.php';
                                 <tr>
                                     <td class="table-image">
                                         <?php if ($fish['image_path']): ?>
-                                            <img src="<?php echo $fish['image_path']; ?>" alt="<?php echo $fish['name']; ?>">
+                                            <img src="../<?php echo $fish['image_path']; ?>" alt="<?php echo $fish['name']; ?>">
                                         <?php else: ?>
                                             <div class="placeholder-image"><i class="fas fa-fish"></i></div>
                                         <?php endif; ?>
