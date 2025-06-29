@@ -25,8 +25,8 @@ $params = [];
 
 if (isset($_GET['search']) && !empty($_GET['search'])) {
     $search = sanitize($_GET['search']);
-    $where_clauses[] = "(f.name LIKE ? OR f.scientific_name LIKE ? OR f.family LIKE ? OR f.environment LIKE ? OR f.description LIKE ? OR f.process_id LIKE ? OR f.sample_id LIKE ? OR f.museum_id LIKE ? OR f.collection_code LIKE ? OR f.field_id LIKE ? OR f.deposited_in LIKE ? OR f.specimen_linkout LIKE ? OR f.sequence_type LIKE ? OR f.sequence_id LIKE ? OR f.genbank_accession LIKE ? OR f.genome_type LIKE ? OR f.locus LIKE ? OR f.dna_sequence LIKE ?)";
-    for ($i = 0; $i < 18; $i++) {
+    $where_clauses[] = "(f.name LIKE ? OR f.scientific_name LIKE ? OR f.family LIKE ? OR f.environment LIKE ? OR f.description LIKE ? OR f.process_id LIKE ? OR f.sample_id LIKE ? OR f.museum_id LIKE ? OR f.collection_code LIKE ? OR f.field_id LIKE ? OR f.deposited_in LIKE ? OR f.specimen_linkout LIKE ? OR f.sequence_type LIKE ? OR f.sequence_id LIKE ? OR f.genbank_accession LIKE ? OR f.genome_type LIKE ? OR f.locus LIKE ? OR f.dna_sequence LIKE ? OR f.collection_country LIKE ? OR f.collection_region LIKE ? OR f.collection_location LIKE ? OR f.collector_name LIKE ?)";
+    for ($i = 0; $i < 22; $i++) {
         $params[] = "%$search%";
     }
 }

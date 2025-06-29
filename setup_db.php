@@ -68,6 +68,13 @@ $fish_table = "CREATE TABLE IF NOT EXISTS fish (
     locus VARCHAR(255) DEFAULT NULL,
     nucleotides_count INT DEFAULT NULL,
     dna_sequence TEXT DEFAULT NULL,
+    collection_country VARCHAR(100) DEFAULT NULL,
+    collection_region VARCHAR(100) DEFAULT NULL,
+    collection_location VARCHAR(255) DEFAULT NULL,
+    collection_date DATE DEFAULT NULL,
+    collection_latitude DECIMAL(10, 8) DEFAULT NULL,
+    collection_longitude DECIMAL(11, 8) DEFAULT NULL,
+    collector_name VARCHAR(100) DEFAULT NULL,
     FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE SET NULL
 )";
 
@@ -127,4 +134,5 @@ echo "   - Database: $db_name (recreated)\n";
 echo "   - Tables: users, fish, fish_images (with categories), fish_datasets\n";
 echo "   - Admin account: admin@aquabase.com / admin123\n";
 echo "   - Image categories: main, fish, skeleton, disease, map\n";
+echo "   - Collection fields: country, region, location, date, coordinates, collector\n";
 ?> 

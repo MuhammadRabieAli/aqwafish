@@ -356,6 +356,85 @@ include 'includes/header.php';
                             </table>
                         </div>
                         <?php endif; ?>
+                        
+                        <?php
+                        // Check if collection data exists
+                        $has_collection = !empty($fish['collection_country']) || 
+                                         !empty($fish['collection_region']) || 
+                                         !empty($fish['collection_location']) || 
+                                         !empty($fish['collection_date']) || 
+                                         !empty($fish['collection_latitude']) || 
+                                         !empty($fish['collection_longitude']) || 
+                                         !empty($fish['collector_name']);
+                        
+                        if ($has_collection):
+                        ?>
+                        <h4 class="collection-heading">COLLECTION INFORMATION</h4>
+                        <div class="collection-container">
+                            <table class="identifiers-table">
+                                <tbody>
+                                    <?php if (!empty($fish['collection_country'])): ?>
+                                    <tr>
+                                        <th>Country/Ocean</th>
+                                        <td><?php echo htmlspecialchars($fish['collection_country']); ?></td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($fish['collection_region'])): ?>
+                                    <tr>
+                                        <th>Province/Region</th>
+                                        <td><?php echo htmlspecialchars($fish['collection_region']); ?></td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($fish['collection_location'])): ?>
+                                    <tr>
+                                        <th>Specific Location</th>
+                                        <td><?php echo htmlspecialchars($fish['collection_location']); ?></td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($fish['collection_date'])): ?>
+                                    <tr>
+                                        <th>Collection Date</th>
+                                        <td><?php echo date('Y-m-d', strtotime($fish['collection_date'])); ?></td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($fish['collection_latitude']) && !empty($fish['collection_longitude'])): ?>
+                                    <tr>
+                                        <th>Coordinates</th>
+                                        <td>
+                                            <?php echo number_format($fish['collection_latitude'], 6); ?>°N, 
+                                            <?php echo number_format($fish['collection_longitude'], 6); ?>°E
+                                            <br>
+                                            <small><a href="https://maps.google.com/?q=<?php echo $fish['collection_latitude']; ?>,<?php echo $fish['collection_longitude']; ?>" target="_blank">
+                                                <i class="fas fa-map-marker-alt"></i> View on Google Maps
+                                            </a></small>
+                                        </td>
+                                    </tr>
+                                    <?php elseif (!empty($fish['collection_latitude'])): ?>
+                                    <tr>
+                                        <th>Latitude</th>
+                                        <td><?php echo number_format($fish['collection_latitude'], 6); ?>°N</td>
+                                    </tr>
+                                    <?php elseif (!empty($fish['collection_longitude'])): ?>
+                                    <tr>
+                                        <th>Longitude</th>
+                                        <td><?php echo number_format($fish['collection_longitude'], 6); ?>°E</td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($fish['collector_name'])): ?>
+                                    <tr>
+                                        <th>Collector</th>
+                                        <td><?php echo htmlspecialchars($fish['collector_name']); ?></td>
+                                    </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
                         </div>
                     </div>
                 </div>

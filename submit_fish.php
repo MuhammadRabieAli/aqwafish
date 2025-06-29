@@ -39,6 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nucleotides_count = !empty($_POST['nucleotides_count']) ? intval($_POST['nucleotides_count']) : null;
     $dna_sequence = sanitize($_POST['dna_sequence'] ?? '');
     
+    // Get collection fields
+    $collection_country = sanitize($_POST['collection_country'] ?? '');
+    $collection_region = sanitize($_POST['collection_region'] ?? '');
+    $collection_location = sanitize($_POST['collection_location'] ?? '');
+    $collection_date = !empty($_POST['collection_date']) ? $_POST['collection_date'] : null;
+    $collection_latitude = !empty($_POST['collection_latitude']) ? floatval($_POST['collection_latitude']) : null;
+    $collection_longitude = !empty($_POST['collection_longitude']) ? floatval($_POST['collection_longitude']) : null;
+    $collector_name = sanitize($_POST['collector_name'] ?? '');
+    
     $errors = [];
     
     // Validate input
@@ -85,8 +94,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Insert fish data
             $sql = "INSERT INTO fish (name, scientific_name, family, environment, size_category, description, submitted_by, status,
                           process_id, sample_id, museum_id, collection_code, field_id, deposited_in, specimen_linkout,
-                          sequence_type, sequence_id, genbank_accession, sequence_updated_at, genome_type, locus, nucleotides_count, dna_sequence) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                          sequence_type, sequence_id, genbank_accession, sequence_updated_at, genome_type, locus, nucleotides_count, dna_sequence,
+                          collection_country, collection_region, collection_location, collection_date, collection_latitude, collection_longitude, collector_name) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             // Verify that the user exists
             $user_check_sql = "SELECT id FROM users WHERE id = ?";
@@ -110,11 +120,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 throw new Exception("Error preparing statement: " . mysqli_error($conn));
             }
             
-            // Bind parameters - we have 22 parameters (7 basic + 7 identifier + 8 sequence)
-            if (!mysqli_stmt_bind_param($stmt, 'ssssssisssssssssssssis', 
+            // Bind parameters - we have 29 parameters (7 basic + 7 identifier + 8 sequence + 7 collection)
+            if (!mysqli_stmt_bind_param($stmt, 'ssssssissssssssssssssissssdds', 
                 $name, $scientific_name, $family, $environment, $size_category, $description, $user_id,
                 $process_id, $sample_id, $museum_id, $collection_code, $field_id, $deposited_in, $specimen_linkout,
-                $sequence_type, $sequence_id, $genbank_accession, $sequence_updated_at, $genome_type, $locus, $nucleotides_count, $dna_sequence)) {
+                $sequence_type, $sequence_id, $genbank_accession, $sequence_updated_at, $genome_type, $locus, $nucleotides_count, $dna_sequence,
+                $collection_country, $collection_region, $collection_location, $collection_date, $collection_latitude, $collection_longitude, $collector_name)) {
                 throw new Exception("Error binding parameters: " . mysqli_stmt_error($stmt));
             }
             
@@ -480,6 +491,63 @@ include 'includes/header.php';
                         <label for="dna_sequence">DNA Sequence</label>
                         <textarea id="dna_sequence" name="dna_sequence" class="form-textarea" rows="6"><?php echo isset($dna_sequence) ? htmlspecialchars($dna_sequence) : ''; ?></textarea>
                         <div class="form-hint">Enter the DNA sequence (A, T, G, C bases)</div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Collection Information</h2>
+                    <p class="form-intro">Details about where and when the specimen was collected</p>
+                    
+                    <div class="identifiers-grid">
+                        <div class="form-group">
+                            <label for="collection_country">Country/Ocean</label>
+                            <input type="text" id="collection_country" name="collection_country" class="form-input" 
+                                   value="<?php echo isset($collection_country) ? htmlspecialchars($collection_country) : ''; ?>">
+                            <div class="form-hint">e.g., Japan, Pacific Ocean</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="collection_region">Province/Region</label>
+                            <input type="text" id="collection_region" name="collection_region" class="form-input" 
+                                   value="<?php echo isset($collection_region) ? htmlspecialchars($collection_region) : ''; ?>">
+                            <div class="form-hint">e.g., Kanagawa, Yokohama</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="collection_location">Specific Location</label>
+                            <input type="text" id="collection_location" name="collection_location" class="form-input" 
+                                   value="<?php echo isset($collection_location) ? htmlspecialchars($collection_location) : ''; ?>">
+                            <div class="form-hint">e.g., Yokosuka, Arasaki</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="collection_date">Collection Date</label>
+                            <input type="date" id="collection_date" name="collection_date" class="form-input" 
+                                   value="<?php echo isset($collection_date) ? date('Y-m-d', strtotime($collection_date)) : ''; ?>">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="collection_latitude">Latitude</label>
+                            <input type="number" id="collection_latitude" name="collection_latitude" class="form-input" 
+                                   step="0.00000001" min="-90" max="90"
+                                   value="<?php echo isset($collection_latitude) ? htmlspecialchars($collection_latitude) : ''; ?>">
+                            <div class="form-hint">e.g., 35.2833333</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="collection_longitude">Longitude</label>
+                            <input type="number" id="collection_longitude" name="collection_longitude" class="form-input" 
+                                   step="0.00000001" min="-180" max="180"
+                                   value="<?php echo isset($collection_longitude) ? htmlspecialchars($collection_longitude) : ''; ?>">
+                            <div class="form-hint">e.g., 139.6666667</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="collector_name">Collector Name</label>
+                            <input type="text" id="collector_name" name="collector_name" class="form-input" 
+                                   value="<?php echo isset($collector_name) ? htmlspecialchars($collector_name) : ''; ?>">
+                            <div class="form-hint">e.g., Satoshi Katayama</div>
+                        </div>
                     </div>
                 </div>
                 

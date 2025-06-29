@@ -16,6 +16,24 @@
     border: 1px solid var(--border);
 }
 
+/* Collection Section Styles */
+
+.collection-heading {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.collection-container {
+    background-color: var(--surface-alt);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border);
+}
+
 .identifiers-table {
     width: 100%;
     border-collapse: collapse;
@@ -65,6 +83,27 @@
 .dataset-item a:hover {
     color: var(--primary-hover);
     text-decoration: underline;
+}
+
+/* Collection specific styles */
+.collection-container small a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    transition: color 0.2s ease;
+}
+
+.collection-container small a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+.collection-container small a i {
+    font-size: 0.8rem;
 }
 
 /* Responsive adjustments */
