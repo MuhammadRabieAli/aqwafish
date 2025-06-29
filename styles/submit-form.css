@@ -1,0 +1,193 @@
+/* Image Upload Categories Styles */
+.image-upload-categories {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.image-upload-categories .form-group {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.image-upload-categories .form-group:hover {
+    border-color: #007bff;
+    background: #f0f8ff;
+}
+
+.image-upload-categories .form-group label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.image-upload-categories .form-group label .required {
+    color: #dc3545;
+}
+
+.image-upload-categories .form-hint {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+/* Image Preview Styles */
+.image-preview-single,
+.image-preview-multiple {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.image-item {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.image-item:hover {
+    transform: scale(1.05);
+}
+
+.image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+/* Category-specific styling */
+.form-group:has(#main_image) {
+    border-color: #28a745;
+}
+
+.form-group:has(#main_image):hover {
+    border-color: #28a745;
+    background: #f0fff4;
+}
+
+.form-group:has(#skeleton_images) {
+    border-color: #6f42c1;
+}
+
+.form-group:has(#skeleton_images):hover {
+    border-color: #6f42c1;
+    background: #f8f4ff;
+}
+
+.form-group:has(#disease_images) {
+    border-color: #dc3545;
+}
+
+.form-group:has(#disease_images):hover {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.form-group:has(#map_image) {
+    border-color: #17a2b8;
+}
+
+.form-group:has(#map_image):hover {
+    border-color: #17a2b8;
+    background: #f0fdff;
+}
+
+/* Existing Images Display (for edit form) */
+.current-images {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.current-images h5 {
+    margin: 0 0 0.75rem 0;
+    color: #495057;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.existing-image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.existing-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid #dee2e6;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.existing-image:hover {
+    border-color: #007bff;
+    transform: scale(1.05);
+}
+
+/* Category-specific existing image borders */
+.form-group:has(#main_image) .existing-image {
+    border-color: #28a745;
+}
+
+.form-group:has(#skeleton_images) .existing-image {
+    border-color: #6f42c1;
+}
+
+.form-group:has(#disease_images) .existing-image {
+    border-color: #dc3545;
+}
+
+.form-group:has(#map_image) .existing-image {
+    border-color: #17a2b8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .image-upload-categories {
+        gap: 1rem;
+    }
+    
+    .image-upload-categories .form-group {
+        padding: 1rem;
+    }
+    
+    .image-item {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .existing-image {
+        width: 60px;
+        height: 60px;
+    }
+} 

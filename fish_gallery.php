@@ -42,12 +42,38 @@ if (mysqli_num_rows($result) == 0) {
 
 $fish = mysqli_fetch_assoc($result);
 
-// Get fish images
-$images_sql = "SELECT * FROM fish_images WHERE fish_id = ? ORDER BY is_primary DESC";
+// Get fish images grouped by category
+$images_sql = "SELECT * FROM fish_images WHERE fish_id = ? ORDER BY 
+              CASE category 
+                  WHEN 'main' THEN 1
+                  WHEN 'fish' THEN 2
+                  WHEN 'regular' THEN 2
+                  WHEN 'skeleton' THEN 3
+                  WHEN 'disease' THEN 4
+                  WHEN 'map' THEN 5
+                  ELSE 6
+              END, is_primary DESC";
 $images_stmt = mysqli_prepare($conn, $images_sql);
 mysqli_stmt_bind_param($images_stmt, 'i', $fish_id);
 mysqli_stmt_execute($images_stmt);
 $images_result = mysqli_stmt_get_result($images_stmt);
+
+// Group images by category
+$categorized_images = [
+    'main' => [],
+    'fish' => [],
+    'skeleton' => [],
+    'disease' => []
+    // Note: Map images are excluded from gallery as per requirements
+];
+
+while ($image = mysqli_fetch_assoc($images_result)) {
+    if ($image['category'] !== 'map') { // Exclude map images from gallery
+        // Map legacy 'regular' to 'fish' for backward compatibility
+        $category = $image['category'] === 'regular' ? 'fish' : $image['category'];
+        $categorized_images[$category][] = $image;
+    }
+}
 
 $page = 'gallery';
 $page_title = $fish['name'] . ' Gallery';
@@ -79,16 +105,71 @@ include 'includes/header.php';
             <a href="fish_details.php?id=<?php echo $fish_id; ?>" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Fish Details</a>
         </div>
         
-        <?php if (mysqli_num_rows($images_result) > 0): ?>
-            <div class="gallery-grid">
-                <?php while ($image = mysqli_fetch_assoc($images_result)): ?>
-                    <div class="gallery-item">
-                        <div class="gallery-image">
-                            <img src="<?php echo $image['image_path']; ?>" alt="<?php echo htmlspecialchars($fish['name']); ?>" 
-                                 onclick="openModal('<?php echo $image['image_path']; ?>', '<?php echo htmlspecialchars($fish['name']); ?>')">
+        <?php if (array_sum(array_map('count', $categorized_images)) > 0): ?>
+            <div class="categorized-gallery">
+                <?php if (!empty($categorized_images['main'])): ?>
+                    <div class="category-section">
+                        <h2 class="category-title">Main Image</h2>
+                        <div class="gallery-grid main-gallery">
+                            <?php foreach ($categorized_images['main'] as $image): ?>
+                                <div class="gallery-item">
+                                    <div class="gallery-image">
+                                        <img src="<?php echo $image['image_path']; ?>" alt="<?php echo htmlspecialchars($fish['name']); ?>" 
+                                             onclick="openModal('<?php echo $image['image_path']; ?>', '<?php echo htmlspecialchars($fish['name']); ?>')">
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
-                <?php endwhile; ?>
+                <?php endif; ?>
+                
+                <?php if (!empty($categorized_images['fish'])): ?>
+                    <div class="category-section">
+                        <h2 class="category-title">Fish Photos</h2>
+                        <div class="gallery-grid">
+                            <?php foreach ($categorized_images['fish'] as $image): ?>
+                                <div class="gallery-item">
+                                    <div class="gallery-image">
+                                        <img src="<?php echo $image['image_path']; ?>" alt="<?php echo htmlspecialchars($fish['name']); ?>" 
+                                             onclick="openModal('<?php echo $image['image_path']; ?>', '<?php echo htmlspecialchars($fish['name']); ?>')">
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($categorized_images['skeleton'])): ?>
+                    <div class="category-section">
+                        <h2 class="category-title">Skeleton & Bone Structure</h2>
+                        <div class="gallery-grid">
+                            <?php foreach ($categorized_images['skeleton'] as $image): ?>
+                                <div class="gallery-item">
+                                    <div class="gallery-image">
+                                        <img src="<?php echo $image['image_path']; ?>" alt="<?php echo htmlspecialchars($fish['name']); ?> skeleton" 
+                                             onclick="openModal('<?php echo $image['image_path']; ?>', '<?php echo htmlspecialchars($fish['name']); ?> skeleton')">
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($categorized_images['disease'])): ?>
+                    <div class="category-section">
+                        <h2 class="category-title">Disease & Pathology</h2>
+                        <div class="gallery-grid">
+                            <?php foreach ($categorized_images['disease'] as $image): ?>
+                                <div class="gallery-item">
+                                    <div class="gallery-image">
+                                        <img src="<?php echo $image['image_path']; ?>" alt="<?php echo htmlspecialchars($fish['name']); ?> pathology" 
+                                             onclick="openModal('<?php echo $image['image_path']; ?>', '<?php echo htmlspecialchars($fish['name']); ?> pathology')">
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php else: ?>
             <div class="no-images">

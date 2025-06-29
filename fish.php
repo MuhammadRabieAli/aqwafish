@@ -33,6 +33,21 @@ if (mysqli_num_rows($result) == 0) {
     mysqli_stmt_execute($stmt);
     $images_result = mysqli_stmt_get_result($stmt);
     
+    // Get main image and map image specifically
+    $main_image_sql = "SELECT * FROM fish_images WHERE fish_id = ? AND category = 'main' LIMIT 1";
+    $main_stmt = mysqli_prepare($conn, $main_image_sql);
+    mysqli_stmt_bind_param($main_stmt, 'i', $fish_id);
+    mysqli_stmt_execute($main_stmt);
+    $main_image_result = mysqli_stmt_get_result($main_stmt);
+    $main_image = mysqli_fetch_assoc($main_image_result);
+    
+    $map_image_sql = "SELECT * FROM fish_images WHERE fish_id = ? AND category = 'map' LIMIT 1";
+    $map_stmt = mysqli_prepare($conn, $map_image_sql);
+    mysqli_stmt_bind_param($map_stmt, 'i', $fish_id);
+    mysqli_stmt_execute($map_stmt);
+    $map_image_result = mysqli_stmt_get_result($map_stmt);
+    $map_image = mysqli_fetch_assoc($map_image_result);
+    
     // Get related fish (same family)
     $related_sql = "SELECT f.id, f.name, f.family, fi.image_path 
                    FROM fish f 
@@ -68,11 +83,9 @@ include 'includes/header.php';
             <div class="fish-content loaded">
                 <div class="fish-header">
                     <div class="fish-gallery">
-                        <?php if (mysqli_num_rows($images_result) > 0): ?>
+                        <?php if ($main_image): ?>
                             <div class="gallery-main">
                                 <?php 
-                                mysqli_data_seek($images_result, 0);
-                                $main_image = mysqli_fetch_assoc($images_result);
                                 $total_images = mysqli_num_rows($images_result);
                                 ?>
                                 <a href="fish_gallery.php?id=<?php echo $fish_id; ?>" class="main-image-link" title="View all <?php echo $total_images; ?> images">
@@ -133,12 +146,22 @@ include 'includes/header.php';
                         </div>
                     </div>
                     
-                                    <div class="detailed-info">
-                    <div class="tab-content active">
-                        <h4>Description</h4>
-                        <div class="fish-description">
-                            <?php echo nl2br(htmlspecialchars($fish['description'])); ?>
-                        </div>
+                    <div class="detailed-info">
+                        <div class="tab-content active">
+                            <h4>Description</h4>
+                            <div class="fish-description">
+                                <?php echo nl2br(htmlspecialchars($fish['description'])); ?>
+                            </div>
+                            
+                            <?php if ($map_image): ?>
+                            <h4 class="map-heading">Distribution Map</h4>
+                            <div class="map-container">
+                                <div class="map-image">
+                                    <img src="<?php echo $map_image['image_path']; ?>" alt="<?php echo htmlspecialchars($fish['name']); ?> distribution map" 
+                                         onclick="openMapModal('<?php echo $map_image['image_path']; ?>', '<?php echo htmlspecialchars($fish['name']); ?> Distribution Map')">
+                                </div>
+                            </div>
+                            <?php endif; ?>
                         
                         <?php
                         // Check if any identifier fields exist
@@ -333,8 +356,8 @@ include 'includes/header.php';
                             </table>
                         </div>
                         <?php endif; ?>
+                        </div>
                     </div>
-                </div>
                 </div>
             </div>
             
@@ -633,7 +656,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// Map modal functionality
+function openMapModal(imageSrc, altText) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    
+    modal.style.display = "flex";
+    modalImg.src = imageSrc;
+    modalImg.alt = altText;
+    
+    // Disable scroll on body when modal is open
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+    document.getElementById('imageModal').style.display = "none";
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal when clicking outside the image
+window.onclick = function(event) {
+    const modal = document.getElementById('imageModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+
+// Handle keyboard events
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeModal();
+    }
+});
 </script>
+
+<!-- Image Modal for Map -->
+<div id="imageModal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <div class="modal-content">
+        <img id="modalImage" src="" alt="">
+    </div>
+</div>
 
 <?php
 // Helper functions

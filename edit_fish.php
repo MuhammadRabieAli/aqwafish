@@ -44,12 +44,34 @@ if (mysqli_num_rows($result) == 0) {
 
 $fish = mysqli_fetch_assoc($result);
 
-// Get fish images
-$images_sql = "SELECT * FROM fish_images WHERE fish_id = ? ORDER BY is_primary DESC";
+// Get fish images grouped by category
+$images_sql = "SELECT * FROM fish_images WHERE fish_id = ? ORDER BY 
+              CASE category 
+                  WHEN 'main' THEN 1
+                  WHEN 'fish' THEN 2
+                  WHEN 'skeleton' THEN 3
+                  WHEN 'disease' THEN 4
+                  WHEN 'map' THEN 5
+                  ELSE 6
+              END, is_primary DESC";
 $images_stmt = mysqli_prepare($conn, $images_sql);
 mysqli_stmt_bind_param($images_stmt, 'i', $fish_id);
 mysqli_stmt_execute($images_stmt);
 $images_result = mysqli_stmt_get_result($images_stmt);
+
+// Group existing images by category
+$existing_images = [
+    'main' => [],
+    'fish' => [],
+    'skeleton' => [],
+    'disease' => [],
+    'map' => []
+];
+
+while ($image = mysqli_fetch_assoc($images_result)) {
+    $category = $image['category'] === 'regular' ? 'fish' : $image['category'];
+    $existing_images[$category][] = $image;
+}
 
     // Process form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -214,51 +236,146 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             
-            // Handle image uploads if any
-            if (!empty($_FILES['fish_images']['name'][0])) {
-                $uploaded_files = $_FILES['fish_images'];
-                $upload_dir = 'uploads/';
-                $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-                $max_size = 5 * 1024 * 1024; // 5MB
-                
-                // Create upload directory if it doesn't exist
-                if (!file_exists($upload_dir)) {
-                    mkdir($upload_dir, 0777, true);
+            // Handle categorized image uploads
+            $upload_dir = 'uploads/';
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+            $max_size = 5 * 1024 * 1024; // 5MB
+            
+            // Function to process file upload
+            function processFileUploadEdit($file, $category, $fish_id, $upload_dir, $allowed_types, $max_size, $conn, $replace_existing = false) {
+                if ($file['error'] === UPLOAD_ERR_OK) {
+                    $file_name = $file['name'];
+                    $file_size = $file['size'];
+                    $file_type = $file['type'];
+                    $file_tmp = $file['tmp_name'];
+                    
+                    // Validate file type
+                    if (!in_array($file_type, $allowed_types)) {
+                        throw new Exception("Invalid file type for {$file_name}. Only JPG, PNG, and GIF are allowed.");
+                    }
+                    
+                    // Validate file size
+                    if ($file_size > $max_size) {
+                        throw new Exception("File {$file_name} is too large. Maximum size is 5MB.");
+                    }
+                    
+                    // Generate unique file name
+                    $ext = pathinfo($file_name, PATHINFO_EXTENSION);
+                    $new_file_name = uniqid('fish_') . '.' . $ext;
+                    $upload_path = $upload_dir . $new_file_name;
+                    
+                    // If replacing existing images of this category, delete them first
+                    if ($replace_existing || $category === 'main' || $category === 'map') {
+                        $delete_sql = "SELECT image_path FROM fish_images WHERE fish_id = ? AND category = ?";
+                        $delete_stmt = mysqli_prepare($conn, $delete_sql);
+                        mysqli_stmt_bind_param($delete_stmt, 'is', $fish_id, $category);
+                        mysqli_stmt_execute($delete_stmt);
+                        $delete_result = mysqli_stmt_get_result($delete_stmt);
+                        
+                        while ($old_image = mysqli_fetch_assoc($delete_result)) {
+                            if (file_exists($old_image['image_path'])) {
+                                unlink($old_image['image_path']);
+                            }
+                        }
+                        
+                        $remove_sql = "DELETE FROM fish_images WHERE fish_id = ? AND category = ?";
+                        $remove_stmt = mysqli_prepare($conn, $remove_sql);
+                        mysqli_stmt_bind_param($remove_stmt, 'is', $fish_id, $category);
+                        mysqli_stmt_execute($remove_stmt);
+                    }
+                    
+                    // Move uploaded file to destination
+                    if (move_uploaded_file($file_tmp, $upload_path)) {
+                        // Insert image info into database with category
+                        $is_primary = ($category == 'main') ? 1 : 0;
+                        $img_sql = "INSERT INTO fish_images (fish_id, image_path, category, is_primary) VALUES (?, ?, ?, ?)";
+                        $img_stmt = mysqli_prepare($conn, $img_sql);
+                        mysqli_stmt_bind_param($img_stmt, 'issi', $fish_id, $upload_path, $category, $is_primary);
+                        
+                        if (!mysqli_stmt_execute($img_stmt)) {
+                            throw new Exception("Error inserting image data: " . mysqli_error($conn));
+                        }
+                    } else {
+                        throw new Exception("Failed to upload {$file_name}");
+                    }
+                } elseif ($file['error'] !== UPLOAD_ERR_NO_FILE) {
+                    throw new Exception("Error uploading file: " . $file['error']);
                 }
-                
-                for ($i = 0; $i < count($uploaded_files['name']); $i++) {
-                    if ($uploaded_files['error'][$i] === 0) {
-                        $file_name = $uploaded_files['name'][$i];
-                        $file_size = $uploaded_files['size'][$i];
-                        $file_type = $uploaded_files['type'][$i];
-                        $file_tmp = $uploaded_files['tmp_name'][$i];
-                        
-                        // Validate file type
-                        if (!in_array($file_type, $allowed_types)) {
-                            $errors[] = "Invalid file type for {$file_name}. Only JPG, PNG, and GIF are allowed.";
-                            continue;
-                        }
-                        
-                        // Validate file size
-                        if ($file_size > $max_size) {
-                            $errors[] = "File {$file_name} is too large. Maximum size is 5MB.";
-                            continue;
-                        }
-                        
-                        // Generate unique file name
-                        $ext = pathinfo($file_name, PATHINFO_EXTENSION);
-                        $new_file_name = uniqid('fish_') . '.' . $ext;
-                        $file_path = $upload_dir . $new_file_name;
-                        
-                        // Upload file
-                        if (move_uploaded_file($file_tmp, $file_path)) {
-                            // Save image in database
-                            $img_sql = "INSERT INTO fish_images (fish_id, image_path) VALUES (?, ?)";
-                            $img_stmt = mysqli_prepare($conn, $img_sql);
-                            mysqli_stmt_bind_param($img_stmt, 'is', $fish_id, $file_path);
-                            mysqli_stmt_execute($img_stmt);
+            }
+            
+            // Check if files were uploaded in any category
+            $has_main = isset($_FILES['main_image']) && !empty($_FILES['main_image']['name'][0]);
+            $has_fish = isset($_FILES['fish_images']) && !empty($_FILES['fish_images']['name'][0]);
+            $has_skeleton = isset($_FILES['skeleton_images']) && !empty($_FILES['skeleton_images']['name'][0]);
+            $has_disease = isset($_FILES['disease_images']) && !empty($_FILES['disease_images']['name'][0]);
+            $has_map = isset($_FILES['map_image']) && !empty($_FILES['map_image']['name']);
+            
+            $has_files = $has_main || $has_fish || $has_skeleton || $has_disease || $has_map;
+            
+            if ($has_files) {
+                try {
+                    // Upload main images (adds to existing)
+                    if ($has_main) {
+                        foreach ($_FILES['main_image']['tmp_name'] as $key => $tmp_name) {
+                            $file = [
+                                'name' => $_FILES['main_image']['name'][$key],
+                                'type' => $_FILES['main_image']['type'][$key],
+                                'tmp_name' => $tmp_name,
+                                'error' => $_FILES['main_image']['error'][$key],
+                                'size' => $_FILES['main_image']['size'][$key]
+                            ];
+                            processFileUploadEdit($file, 'main', $fish_id, $upload_dir, $allowed_types, $max_size, $conn, false);
                         }
                     }
+                    
+                    // Upload fish images (adds to existing)
+                    if ($has_fish) {
+                        foreach ($_FILES['fish_images']['tmp_name'] as $key => $tmp_name) {
+                            $file = [
+                                'name' => $_FILES['fish_images']['name'][$key],
+                                'type' => $_FILES['fish_images']['type'][$key],
+                                'tmp_name' => $tmp_name,
+                                'error' => $_FILES['fish_images']['error'][$key],
+                                'size' => $_FILES['fish_images']['size'][$key]
+                            ];
+                            processFileUploadEdit($file, 'fish', $fish_id, $upload_dir, $allowed_types, $max_size, $conn, false);
+                        }
+                    }
+                    
+                    // Upload skeleton images (adds to existing)
+                    if ($has_skeleton) {
+                        foreach ($_FILES['skeleton_images']['tmp_name'] as $key => $tmp_name) {
+                            $file = [
+                                'name' => $_FILES['skeleton_images']['name'][$key],
+                                'type' => $_FILES['skeleton_images']['type'][$key],
+                                'tmp_name' => $tmp_name,
+                                'error' => $_FILES['skeleton_images']['error'][$key],
+                                'size' => $_FILES['skeleton_images']['size'][$key]
+                            ];
+                            processFileUploadEdit($file, 'skeleton', $fish_id, $upload_dir, $allowed_types, $max_size, $conn, false);
+                        }
+                    }
+                    
+                    // Upload disease images (adds to existing)
+                    if ($has_disease) {
+                        foreach ($_FILES['disease_images']['tmp_name'] as $key => $tmp_name) {
+                            $file = [
+                                'name' => $_FILES['disease_images']['name'][$key],
+                                'type' => $_FILES['disease_images']['type'][$key],
+                                'tmp_name' => $tmp_name,
+                                'error' => $_FILES['disease_images']['error'][$key],
+                                'size' => $_FILES['disease_images']['size'][$key]
+                            ];
+                            processFileUploadEdit($file, 'disease', $fish_id, $upload_dir, $allowed_types, $max_size, $conn, false);
+                        }
+                    }
+                    
+                    // Upload map image (replaces existing)
+                    if ($has_map) {
+                        processFileUploadEdit($_FILES['map_image'], 'map', $fish_id, $upload_dir, $allowed_types, $max_size, $conn, true);
+                    }
+                } catch (Exception $e) {
+                    $errors[] = $e->getMessage();
                 }
             }
             
@@ -533,28 +650,94 @@ include 'includes/header.php';
                 
                 <div class="form-section">
                     <h2>Images</h2>
+                    <p class="form-intro">Update images in different categories. Main and Map images will replace existing ones, while others will be added.</p>
                     
-                    <div class="form-group">
-                        <label for="fish_images">Upload Additional Images</label>
-                        <input type="file" id="fish_images" name="fish_images[]" class="form-file" multiple accept="image/jpeg,image/png,image/gif">
-                        <div class="form-hint">You can upload multiple images (max 5MB each). Current images will be preserved.</div>
-                        <div id="image-preview" class="image-preview">
-                            <div id="preview-container" class="preview-container"></div>
+                    <div class="image-upload-categories">
+                        <div class="form-group">
+                            <label for="main_image">Main Images</label>
+                            <input type="file" id="main_image" name="main_image[]" class="form-file" multiple accept="image/jpeg,image/png,image/gif">
+                            <div class="form-hint">Add more main images (will be added to existing ones)</div>
+                            <div id="main-preview" class="image-preview-multiple"></div>
+                            <?php if (!empty($existing_images['main'])): ?>
+                                <div class="current-images">
+                                    <h5>Current Main Images:</h5>
+                                    <div class="existing-image-grid">
+                                        <?php foreach ($existing_images['main'] as $image): ?>
+                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Main Image" class="existing-image">
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="fish_images">Fish Photos</label>
+                            <input type="file" id="fish_images" name="fish_images[]" class="form-file" multiple accept="image/jpeg,image/png,image/gif">
+                            <div class="form-hint">Add more fish photos (will be added to existing ones)</div>
+                            <div id="fish-preview" class="image-preview-multiple"></div>
+                            <?php if (!empty($existing_images['fish'])): ?>
+                                <div class="current-images">
+                                    <h5>Current Fish Images:</h5>
+                                    <div class="existing-image-grid">
+                                        <?php foreach ($existing_images['fish'] as $image): ?>
+                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Fish Image" class="existing-image">
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="skeleton_images">Skeleton/Bone Structure</label>
+                            <input type="file" id="skeleton_images" name="skeleton_images[]" class="form-file" multiple accept="image/jpeg,image/png,image/gif">
+                            <div class="form-hint">Add skeleton or bone structure images</div>
+                            <div id="skeleton-preview" class="image-preview-multiple"></div>
+                            <?php if (!empty($existing_images['skeleton'])): ?>
+                                <div class="current-images">
+                                    <h5>Current Skeleton Images:</h5>
+                                    <div class="existing-image-grid">
+                                        <?php foreach ($existing_images['skeleton'] as $image): ?>
+                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Skeleton Image" class="existing-image">
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="disease_images">Disease/Pathology</label>
+                            <input type="file" id="disease_images" name="disease_images[]" class="form-file" multiple accept="image/jpeg,image/png,image/gif">
+                            <div class="form-hint">Add disease or pathology images</div>
+                            <div id="disease-preview" class="image-preview-multiple"></div>
+                            <?php if (!empty($existing_images['disease'])): ?>
+                                <div class="current-images">
+                                    <h5>Current Disease Images:</h5>
+                                    <div class="existing-image-grid">
+                                        <?php foreach ($existing_images['disease'] as $image): ?>
+                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Disease Image" class="existing-image">
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="map_image">Distribution Map</label>
+                            <input type="file" id="map_image" name="map_image" class="form-file" accept="image/jpeg,image/png,image/gif">
+                            <div class="form-hint">Upload a new distribution map (will replace existing)</div>
+                            <div id="map-preview" class="image-preview-single"></div>
+                            <?php if (!empty($existing_images['map'])): ?>
+                                <div class="current-images">
+                                    <h5>Current Map Image:</h5>
+                                    <div class="existing-image-grid">
+                                        <?php foreach ($existing_images['map'] as $image): ?>
+                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Map Image" class="existing-image">
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
-                    
-                    <?php if (mysqli_num_rows($images_result) > 0): ?>
-                        <div class="existing-images">
-                            <h4>Current Images</h4>
-                            <div class="image-preview-container">
-                                <?php while ($image = mysqli_fetch_assoc($images_result)): ?>
-                                    <div class="image-preview">
-                                        <img src="<?php echo $image['image_path']; ?>" alt="Fish Image">
-                                    </div>
-                                <?php endwhile; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
                 </div>
                 
                 <div class="form-actions">
@@ -567,34 +750,50 @@ include 'includes/header.php';
 </main>
 
 <script>
-    // Image preview functionality
-    document.getElementById('fish_images').addEventListener('change', function(e) {
-        const previewContainer = document.getElementById('preview-container');
-        previewContainer.innerHTML = ''; // Clear previous previews
+    // Image preview functionality for categorized uploads
+    function setupImagePreviewEdit(inputId, previewId, isMultiple = false) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
         
-        if (this.files) {
-            Array.from(this.files).forEach((file, index) => {
-                if (!file.type.match('image.*')) {
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.createElement('div');
-                    preview.className = 'image-preview';
+        input.addEventListener('change', function(e) {
+            preview.innerHTML = ''; // Clear previous previews
+            
+            if (this.files && this.files.length > 0) {
+                Array.from(this.files).forEach((file, index) => {
+                    if (!file.type.match('image.*')) {
+                        return;
+                    }
                     
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.alt = 'Image Preview';
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview_item = document.createElement('div');
+                        preview_item.className = 'image-item';
+                        
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.title = file.name;
+                        
+                        const caption = document.createElement('div');
+                        caption.className = 'image-caption';
+                        caption.textContent = isMultiple ? `New Image ${index + 1}` : 'New Image';
+                        
+                        preview_item.appendChild(img);
+                        preview_item.appendChild(caption);
+                        preview.appendChild(preview_item);
+                    };
                     
-                    preview.appendChild(img);
-                    previewContainer.appendChild(preview);
-                }
-                
-                reader.readAsDataURL(file);
-            });
-        }
-    });
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+    }
+    
+    // Setup previews for all image categories
+    setupImagePreviewEdit('main_image', 'main-preview', true);
+    setupImagePreviewEdit('fish_images', 'fish-preview', true);
+    setupImagePreviewEdit('skeleton_images', 'skeleton-preview', true);
+    setupImagePreviewEdit('disease_images', 'disease-preview', true);
+    setupImagePreviewEdit('map_image', 'map-preview', false);
     
     // Dataset entry functionality
     document.addEventListener('click', function(e) {

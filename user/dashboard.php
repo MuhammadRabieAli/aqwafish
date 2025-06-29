@@ -19,7 +19,20 @@ $user_id = $_SESSION['user_id'];
 
 // Get user's fish submissions
 $sql = "SELECT f.*, COUNT(fi.id) AS image_count, 
-        (SELECT image_path FROM fish_images WHERE fish_id = f.id LIMIT 1) AS image_path
+        (SELECT image_path FROM fish_images WHERE fish_id = f.id 
+         ORDER BY 
+         CASE category 
+             WHEN 'main' THEN 1 
+             WHEN 'fish' THEN 2 
+             WHEN 'regular' THEN 2 
+             WHEN 'skeleton' THEN 3 
+             WHEN 'disease' THEN 4 
+             WHEN 'map' THEN 5 
+             ELSE 6 
+         END, 
+         is_primary DESC, 
+         id ASC 
+         LIMIT 1) AS image_path
         FROM fish f 
         LEFT JOIN fish_images fi ON f.id = fi.fish_id
         WHERE f.submitted_by = ?
@@ -118,7 +131,7 @@ include '../includes/header.php';
                                 <tr>
                                     <td class="table-image">
                                         <?php if ($fish['image_path']): ?>
-                                            <img src="<?php echo $fish['image_path']; ?>" alt="<?php echo $fish['name']; ?>">
+                                            <img src="../<?php echo $fish['image_path']; ?>" alt="<?php echo $fish['name']; ?>">
                                         <?php else: ?>
                                             <div class="placeholder-image"><i class="fas fa-fish"></i></div>
                                         <?php endif; ?>
