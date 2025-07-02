@@ -73,11 +73,13 @@ while ($image = mysqli_fetch_assoc($images_result)) {
     $existing_images[$category][] = $image;
 }
 
-    // Process form submission
+// Process form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // First, verify that the user exists
     $user_check_sql = "SELECT id FROM users WHERE id = ?";
     $user_check_stmt = mysqli_prepare($conn, $user_check_sql);
+    $general_error = null;
+    
     if (!$user_check_stmt) {
         $general_error = "Error preparing user check statement: " . mysqli_error($conn);
     } else {
@@ -101,242 +103,253 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $size_category = sanitize($_POST['size_category']);
         $description = sanitize($_POST['description']);
     
-    // Get identifier fields
-    $process_id = sanitize($_POST['process_id'] ?? '');
-    $sample_id = sanitize($_POST['sample_id'] ?? '');
-    $museum_id = sanitize($_POST['museum_id'] ?? '');
-    $collection_code = sanitize($_POST['collection_code'] ?? '');
-    $field_id = sanitize($_POST['field_id'] ?? '');
-    $deposited_in = sanitize($_POST['deposited_in'] ?? '');
-    $specimen_linkout = sanitize($_POST['specimen_linkout'] ?? '');
-    
-    // Get genetic sequence fields
-    $sequence_type = sanitize($_POST['sequence_type'] ?? '');
-    $sequence_id = sanitize($_POST['sequence_id'] ?? '');
-    $genbank_accession = sanitize($_POST['genbank_accession'] ?? '');
-    $sequence_updated_at = !empty($_POST['sequence_updated_at']) ? $_POST['sequence_updated_at'] : null;
-    $genome_type = sanitize($_POST['genome_type'] ?? '');
-    $locus = sanitize($_POST['locus'] ?? '');
-    $nucleotides_count = !empty($_POST['nucleotides_count']) ? intval($_POST['nucleotides_count']) : null;
-    $dna_sequence = sanitize($_POST['dna_sequence'] ?? '');
-    
-    // Get collection fields
-    $collection_country = sanitize($_POST['collection_country'] ?? '');
-    $collection_region = sanitize($_POST['collection_region'] ?? '');
-    $collection_location = sanitize($_POST['collection_location'] ?? '');
-    $collection_date = !empty($_POST['collection_date']) ? $_POST['collection_date'] : null;
-    $collection_latitude = !empty($_POST['collection_latitude']) ? floatval($_POST['collection_latitude']) : null;
-    $collection_longitude = !empty($_POST['collection_longitude']) ? floatval($_POST['collection_longitude']) : null;
-    $collector_name = sanitize($_POST['collector_name'] ?? '');
-    
-    // Validate required fields
-    $errors = [];
-    
-    if (empty($name)) {
-        $errors['name'] = "Fish name is required";
-    }
-    
-    if (empty($family)) {
-        $errors['family'] = "Family is required";
-    }
-    
-    if (empty($environment) || !in_array($environment, ['freshwater', 'saltwater', 'brackish'])) {
-        $errors['environment'] = "Valid environment is required";
-    }
-    
-    if (empty($size_category) || !in_array($size_category, ['small', 'medium', 'large'])) {
-        $errors['size_category'] = "Valid size category is required";
-    }
-    
-    if (empty($description)) {
-        $errors['description'] = "Description is required";
-    }
-    
-    // If no errors, update the fish
-    if (empty($errors)) {
-        $update_sql = "UPDATE fish SET 
-                      name = ?,
-                      scientific_name = ?,
-                      family = ?,
-                      environment = ?,
-                      size_category = ?,
-                      description = ?,
-                      process_id = ?,
-                      sample_id = ?,
-                      museum_id = ?,
-                      collection_code = ?,
-                      field_id = ?,
-                      deposited_in = ?,
-                      specimen_linkout = ?,
-                      sequence_type = ?,
-                      sequence_id = ?,
-                      genbank_accession = ?,
-                      sequence_updated_at = ?,
-                      genome_type = ?,
-                      locus = ?,
-                      nucleotides_count = ?,
-                      dna_sequence = ?,
-                      collection_country = ?,
-                      collection_region = ?,
-                      collection_location = ?,
-                      collection_date = ?,
-                      collection_latitude = ?,
-                      collection_longitude = ?,
-                      collector_name = ?,
-                      updated_at = CURRENT_TIMESTAMP
-                      WHERE id = ?";
-                      
-        $update_stmt = mysqli_prepare($conn, $update_sql);
-        if (!$update_stmt) {
-            $general_error = "Error preparing statement: " . mysqli_error($conn);
-        } else {
-            // Only try to bind parameters if prepare was successful
-            $bind_result = mysqli_stmt_bind_param(
-                $update_stmt, 
-                'ssssssssssssssssssssissssddsi',
-                $name, 
-                $scientific_name, 
-                $family, 
-                $environment, 
-                $size_category, 
-                $description,
-                $process_id,
-                $sample_id,
-                $museum_id,
-                $collection_code,
-                $field_id,
-                $deposited_in,
-                $specimen_linkout,
-                $sequence_type,
-                $sequence_id,
-                $genbank_accession,
-                $sequence_updated_at,
-                $genome_type,
-                $locus,
-                $nucleotides_count,
-                $dna_sequence,
-                $collection_country,
-                $collection_region,
-                $collection_location,
-                $collection_date,
-                $collection_latitude,
-                $collection_longitude,
-                $collector_name,
-                $fish_id
-            );
+        // Get identifier fields
+        $process_id = sanitize($_POST['process_id'] ?? '');
+        $sample_id = sanitize($_POST['sample_id'] ?? '');
+        $museum_id = sanitize($_POST['museum_id'] ?? '');
+        $collection_code = sanitize($_POST['collection_code'] ?? '');
+        $field_id = sanitize($_POST['field_id'] ?? '');
+        $deposited_in = sanitize($_POST['deposited_in'] ?? '');
+        $specimen_linkout = sanitize($_POST['specimen_linkout'] ?? '');
+        
+        // Get genetic sequence fields
+        $sequence_type = sanitize($_POST['sequence_type'] ?? '');
+        $sequence_id = sanitize($_POST['sequence_id'] ?? '');
+        $genbank_accession = sanitize($_POST['genbank_accession'] ?? '');
+        $sequence_updated_at = !empty($_POST['sequence_updated_at']) ? $_POST['sequence_updated_at'] : null;
+        $genome_type = sanitize($_POST['genome_type'] ?? '');
+        $locus = sanitize($_POST['locus'] ?? '');
+        $nucleotides_count = !empty($_POST['nucleotides_count']) ? intval($_POST['nucleotides_count']) : null;
+        
+        // Process DNA sequence directly without using the sanitize function
+        $raw_dna = $_POST['dna_sequence'] ?? '';
+        if (!empty($raw_dna)) {
+            // Strip any non-ACGT characters and convert to uppercase
+            $dna_sequence = strtoupper(preg_replace('/[^ACGTacgt]/', '', $raw_dna));
             
-            if (!$bind_result) {
-                $general_error = "Error binding parameters: " . mysqli_stmt_error($update_stmt);
+            // Also update nucleotides count if we have a valid sequence
+            if (strlen($dna_sequence) > 0) {
+                $nucleotides_count = strlen($dna_sequence);
             }
+        } else {
+            $dna_sequence = '';
         }
         
-        if (!isset($general_error) && mysqli_stmt_execute($update_stmt)) {
-            // Handle datasets
-            // First, delete all existing datasets for this fish
-            $delete_datasets_sql = "DELETE FROM fish_datasets WHERE fish_id = ?";
-            $delete_datasets_stmt = mysqli_prepare($conn, $delete_datasets_sql);
-            mysqli_stmt_bind_param($delete_datasets_stmt, 'i', $fish_id);
-            mysqli_stmt_execute($delete_datasets_stmt);
+        // Get collection fields
+        $collection_country = sanitize($_POST['collection_country'] ?? '');
+        $collection_region = sanitize($_POST['collection_region'] ?? '');
+        $collection_location = sanitize($_POST['collection_location'] ?? '');
+        $collection_date = !empty($_POST['collection_date']) ? $_POST['collection_date'] : null;
+        $collection_latitude = !empty($_POST['collection_latitude']) ? floatval($_POST['collection_latitude']) : null;
+        $collection_longitude = !empty($_POST['collection_longitude']) ? floatval($_POST['collection_longitude']) : null;
+        $collector_name = sanitize($_POST['collector_name'] ?? '');
+        
+        // Validate required fields
+        $errors = [];
+        
+        if (empty($name)) {
+            $errors['name'] = "Fish name is required";
+        }
+        
+        if (empty($family)) {
+            $errors['family'] = "Family is required";
+        }
+        
+        if (empty($environment) || !in_array($environment, ['freshwater', 'saltwater', 'brackish'])) {
+            $errors['environment'] = "Valid environment is required";
+        }
+        
+        if (empty($size_category) || !in_array($size_category, ['small', 'medium', 'large'])) {
+            $errors['size_category'] = "Valid size category is required";
+        }
+        
+        if (empty($description)) {
+            $errors['description'] = "Description is required";
+        }
+        
+        // If no errors, update the fish
+        if (empty($errors)) {
+            // Begin transaction
+            mysqli_begin_transaction($conn);
             
-            // Now insert the updated datasets
-            if (isset($_POST['dataset_code']) && is_array($_POST['dataset_code'])) {
-                $dataset_codes = $_POST['dataset_code'];
-                $dataset_names = $_POST['dataset_name'] ?? [];
-                $dataset_urls = $_POST['dataset_url'] ?? [];
+            try {
+                // Use direct SQL for all updates, like in update_fish_dna.php
+                $update_sql = "UPDATE fish SET 
+                              name = '" . mysqli_real_escape_string($conn, $name) . "',
+                              scientific_name = '" . mysqli_real_escape_string($conn, $scientific_name) . "',
+                              family = '" . mysqli_real_escape_string($conn, $family) . "',
+                              environment = '" . mysqli_real_escape_string($conn, $environment) . "',
+                              size_category = '" . mysqli_real_escape_string($conn, $size_category) . "',
+                              description = '" . mysqli_real_escape_string($conn, $description) . "',
+                              process_id = '" . mysqli_real_escape_string($conn, $process_id) . "',
+                              sample_id = '" . mysqli_real_escape_string($conn, $sample_id) . "',
+                              museum_id = '" . mysqli_real_escape_string($conn, $museum_id) . "',
+                              collection_code = '" . mysqli_real_escape_string($conn, $collection_code) . "',
+                              field_id = '" . mysqli_real_escape_string($conn, $field_id) . "',
+                              deposited_in = '" . mysqli_real_escape_string($conn, $deposited_in) . "',
+                              specimen_linkout = '" . mysqli_real_escape_string($conn, $specimen_linkout) . "',
+                              sequence_type = '" . mysqli_real_escape_string($conn, $sequence_type) . "',
+                              sequence_id = '" . mysqli_real_escape_string($conn, $sequence_id) . "',
+                              genbank_accession = '" . mysqli_real_escape_string($conn, $genbank_accession) . "',";
                 
-                $insert_dataset_sql = "INSERT INTO fish_datasets (fish_id, dataset_code, dataset_name, dataset_url) VALUES (?, ?, ?, ?)";
-                $insert_dataset_stmt = mysqli_prepare($conn, $insert_dataset_sql);
-                
-                for ($i = 0; $i < count($dataset_codes); $i++) {
-                    if (!empty($dataset_codes[$i]) && !empty($dataset_names[$i])) {
-                        $code = sanitize($dataset_codes[$i]);
-                        $name = sanitize($dataset_names[$i]);
-                        $url = !empty($dataset_urls[$i]) ? sanitize($dataset_urls[$i]) : null;
-                        
-                        mysqli_stmt_bind_param($insert_dataset_stmt, 'isss', $fish_id, $code, $name, $url);
-                        mysqli_stmt_execute($insert_dataset_stmt);
-                    }
+                // Handle date fields properly
+                if (!empty($sequence_updated_at)) {
+                    $update_sql .= " sequence_updated_at = '" . mysqli_real_escape_string($conn, $sequence_updated_at) . "',";
+                } else {
+                    $update_sql .= " sequence_updated_at = NULL,";
                 }
-            }
-            
-            // Handle categorized image uploads
-            $upload_dir = 'uploads/';
-            $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-            $max_size = 5 * 1024 * 1024; // 5MB
-            
-            // Function to process file upload
-            function processFileUploadEdit($file, $category, $fish_id, $upload_dir, $allowed_types, $max_size, $conn, $replace_existing = false) {
-                if ($file['error'] === UPLOAD_ERR_OK) {
-                    $file_name = $file['name'];
-                    $file_size = $file['size'];
-                    $file_type = $file['type'];
-                    $file_tmp = $file['tmp_name'];
+                
+                $update_sql .= " genome_type = '" . mysqli_real_escape_string($conn, $genome_type) . "',
+                              locus = '" . mysqli_real_escape_string($conn, $locus) . "',";
+                
+                // Handle numeric fields properly
+                if ($nucleotides_count !== null) {
+                    $update_sql .= " nucleotides_count = " . (int)$nucleotides_count . ",";
+                } else {
+                    $update_sql .= " nucleotides_count = NULL,";
+                }
+                
+                // Add DNA sequence field directly in the SQL
+                $update_sql .= " dna_sequence = '" . mysqli_real_escape_string($conn, $dna_sequence) . "',";
+                              
+                $update_sql .= " collection_country = '" . mysqli_real_escape_string($conn, $collection_country) . "',
+                              collection_region = '" . mysqli_real_escape_string($conn, $collection_region) . "',
+                              collection_location = '" . mysqli_real_escape_string($conn, $collection_location) . "',";
+                
+                // Handle date fields properly
+                if (!empty($collection_date)) {
+                    $update_sql .= " collection_date = '" . mysqli_real_escape_string($conn, $collection_date) . "',";
+                } else {
+                    $update_sql .= " collection_date = NULL,";
+                }
+                
+                // Handle numeric fields properly
+                if ($collection_latitude !== null) {
+                    $update_sql .= " collection_latitude = " . (float)$collection_latitude . ",";
+                } else {
+                    $update_sql .= " collection_latitude = NULL,";
+                }
+                
+                if ($collection_longitude !== null) {
+                    $update_sql .= " collection_longitude = " . (float)$collection_longitude . ",";
+                } else {
+                    $update_sql .= " collection_longitude = NULL,";
+                }
+                
+                $update_sql .= " collector_name = '" . mysqli_real_escape_string($conn, $collector_name) . "',
+                              updated_at = CURRENT_TIMESTAMP
+                              WHERE id = " . (int)$fish_id;
+                
+                if (!mysqli_query($conn, $update_sql)) {
+                    throw new Exception("Error updating fish data: " . mysqli_error($conn));
+                }
+                
+                // Handle datasets
+                // First, delete all existing datasets for this fish
+                $delete_datasets_sql = "DELETE FROM fish_datasets WHERE fish_id = " . (int)$fish_id;
+                if (!mysqli_query($conn, $delete_datasets_sql)) {
+                    throw new Exception("Error deleting datasets: " . mysqli_error($conn));
+                }
+                
+                // Now insert the updated datasets
+                if (isset($_POST['dataset_code']) && is_array($_POST['dataset_code'])) {
+                    $dataset_codes = $_POST['dataset_code'];
+                    $dataset_names = $_POST['dataset_name'] ?? [];
+                    $dataset_urls = $_POST['dataset_url'] ?? [];
                     
-                    // Validate file type
-                    if (!in_array($file_type, $allowed_types)) {
-                        throw new Exception("Invalid file type for {$file_name}. Only JPG, PNG, and GIF are allowed.");
-                    }
-                    
-                    // Validate file size
-                    if ($file_size > $max_size) {
-                        throw new Exception("File {$file_name} is too large. Maximum size is 5MB.");
-                    }
-                    
-                    // Generate unique file name
-                    $ext = pathinfo($file_name, PATHINFO_EXTENSION);
-                    $new_file_name = uniqid('fish_') . '.' . $ext;
-                    $upload_path = $upload_dir . $new_file_name;
-                    
-                    // If replacing existing images of this category, delete them first
-                    if ($replace_existing || $category === 'main' || $category === 'map') {
-                        $delete_sql = "SELECT image_path FROM fish_images WHERE fish_id = ? AND category = ?";
-                        $delete_stmt = mysqli_prepare($conn, $delete_sql);
-                        mysqli_stmt_bind_param($delete_stmt, 'is', $fish_id, $category);
-                        mysqli_stmt_execute($delete_stmt);
-                        $delete_result = mysqli_stmt_get_result($delete_stmt);
-                        
-                        while ($old_image = mysqli_fetch_assoc($delete_result)) {
-                            if (file_exists($old_image['image_path'])) {
-                                unlink($old_image['image_path']);
+                    for ($i = 0; $i < count($dataset_codes); $i++) {
+                        if (!empty($dataset_codes[$i]) && !empty($dataset_names[$i])) {
+                            $code = mysqli_real_escape_string($conn, sanitize($dataset_codes[$i]));
+                            $name = mysqli_real_escape_string($conn, sanitize($dataset_names[$i]));
+                            $url = !empty($dataset_urls[$i]) ? "'" . mysqli_real_escape_string($conn, sanitize($dataset_urls[$i])) . "'" : "NULL";
+                            
+                            $insert_dataset_sql = "INSERT INTO fish_datasets (fish_id, dataset_code, dataset_name, dataset_url) 
+                                                VALUES (" . (int)$fish_id . ", '" . $code . "', '" . $name . "', " . $url . ")";
+                            
+                            if (!mysqli_query($conn, $insert_dataset_sql)) {
+                                throw new Exception("Error inserting dataset: " . mysqli_error($conn));
                             }
                         }
-                        
-                        $remove_sql = "DELETE FROM fish_images WHERE fish_id = ? AND category = ?";
-                        $remove_stmt = mysqli_prepare($conn, $remove_sql);
-                        mysqli_stmt_bind_param($remove_stmt, 'is', $fish_id, $category);
-                        mysqli_stmt_execute($remove_stmt);
                     }
-                    
-                    // Move uploaded file to destination
-                    if (move_uploaded_file($file_tmp, $upload_path)) {
-                        // Insert image info into database with category
-                        $is_primary = ($category == 'main') ? 1 : 0;
-                        $img_sql = "INSERT INTO fish_images (fish_id, image_path, category, is_primary) VALUES (?, ?, ?, ?)";
-                        $img_stmt = mysqli_prepare($conn, $img_sql);
-                        mysqli_stmt_bind_param($img_stmt, 'issi', $fish_id, $upload_path, $category, $is_primary);
-                        
-                        if (!mysqli_stmt_execute($img_stmt)) {
-                            throw new Exception("Error inserting image data: " . mysqli_error($conn));
-                        }
-                    } else {
-                        throw new Exception("Failed to upload {$file_name}");
-                    }
-                } elseif ($file['error'] !== UPLOAD_ERR_NO_FILE) {
-                    throw new Exception("Error uploading file: " . $file['error']);
                 }
-            }
-            
-            // Check if files were uploaded in any category
-            $has_main = isset($_FILES['main_image']) && !empty($_FILES['main_image']['name'][0]);
-            $has_fish = isset($_FILES['fish_images']) && !empty($_FILES['fish_images']['name'][0]);
-            $has_skeleton = isset($_FILES['skeleton_images']) && !empty($_FILES['skeleton_images']['name'][0]);
-            $has_disease = isset($_FILES['disease_images']) && !empty($_FILES['disease_images']['name'][0]);
-            $has_map = isset($_FILES['map_image']) && !empty($_FILES['map_image']['name']);
-            
-            $has_files = $has_main || $has_fish || $has_skeleton || $has_disease || $has_map;
-            
-            if ($has_files) {
-                try {
+                
+                // Handle categorized image uploads
+                $upload_dir = 'uploads/';
+                $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+                $max_size = 5 * 1024 * 1024; // 5MB
+                
+                // Function to process file upload
+                function processFileUploadEdit($file, $category, $fish_id, $upload_dir, $allowed_types, $max_size, $conn, $replace_existing = false) {
+                    if ($file['error'] === UPLOAD_ERR_OK) {
+                        $file_name = $file['name'];
+                        $file_size = $file['size'];
+                        $file_type = $file['type'];
+                        $file_tmp = $file['tmp_name'];
+                        
+                        // Validate file type
+                        if (!in_array($file_type, $allowed_types)) {
+                            throw new Exception("Invalid file type for {$file_name}. Only JPG, PNG, and GIF are allowed.");
+                        }
+                        
+                        // Validate file size
+                        if ($file_size > $max_size) {
+                            throw new Exception("File {$file_name} is too large. Maximum size is 5MB.");
+                        }
+                        
+                        // Generate unique file name
+                        $ext = pathinfo($file_name, PATHINFO_EXTENSION);
+                        $new_file_name = uniqid('fish_') . '.' . $ext;
+                        $upload_path = $upload_dir . $new_file_name;
+                        
+                        // If replacing existing images of this category, delete them first
+                        if ($replace_existing || $category === 'main' || $category === 'map') {
+                            $delete_sql = "SELECT image_path FROM fish_images WHERE fish_id = ? AND category = ?";
+                            $delete_stmt = mysqli_prepare($conn, $delete_sql);
+                            mysqli_stmt_bind_param($delete_stmt, 'is', $fish_id, $category);
+                            mysqli_stmt_execute($delete_stmt);
+                            $delete_result = mysqli_stmt_get_result($delete_stmt);
+                            
+                            while ($old_image = mysqli_fetch_assoc($delete_result)) {
+                                if (file_exists($old_image['image_path'])) {
+                                    unlink($old_image['image_path']);
+                                }
+                            }
+                            
+                            $remove_sql = "DELETE FROM fish_images WHERE fish_id = ? AND category = ?";
+                            $remove_stmt = mysqli_prepare($conn, $remove_sql);
+                            mysqli_stmt_bind_param($remove_stmt, 'is', $fish_id, $category);
+                            mysqli_stmt_execute($remove_stmt);
+                        }
+                        
+                        // Move uploaded file to destination
+                        if (move_uploaded_file($file_tmp, $upload_path)) {
+                            // Insert image info into database with category
+                            $is_primary = ($category == 'main') ? 1 : 0;
+                            $img_sql = "INSERT INTO fish_images (fish_id, image_path, category, is_primary) VALUES (?, ?, ?, ?)";
+                            $img_stmt = mysqli_prepare($conn, $img_sql);
+                            mysqli_stmt_bind_param($img_stmt, 'issi', $fish_id, $upload_path, $category, $is_primary);
+                            
+                            if (!mysqli_stmt_execute($img_stmt)) {
+                                throw new Exception("Error inserting image data: " . mysqli_error($conn));
+                            }
+                        } else {
+                            throw new Exception("Failed to upload {$file_name}");
+                        }
+                    } elseif ($file['error'] !== UPLOAD_ERR_NO_FILE) {
+                        throw new Exception("Error uploading file: " . $file['error']);
+                    }
+                }
+                
+                // Check if files were uploaded in any category
+                $has_main = isset($_FILES['main_image']) && !empty($_FILES['main_image']['name'][0]);
+                $has_fish = isset($_FILES['fish_images']) && !empty($_FILES['fish_images']['name'][0]);
+                $has_skeleton = isset($_FILES['skeleton_images']) && !empty($_FILES['skeleton_images']['name'][0]);
+                $has_disease = isset($_FILES['disease_images']) && !empty($_FILES['disease_images']['name'][0]);
+                $has_map = isset($_FILES['map_image']) && !empty($_FILES['map_image']['name']);
+                
+                $has_files = $has_main || $has_fish || $has_skeleton || $has_disease || $has_map;
+                
+                if ($has_files) {
                     // Upload main images (adds to existing)
                     if ($has_main) {
                         foreach ($_FILES['main_image']['tmp_name'] as $key => $tmp_name) {
@@ -393,24 +406,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                     
-                    // Upload map image (replaces existing)
+                    // Upload map image (replaces any existing)
                     if ($has_map) {
-                        processFileUploadEdit($_FILES['map_image'], 'map', $fish_id, $upload_dir, $allowed_types, $max_size, $conn, true);
+                        $file = [
+                            'name' => $_FILES['map_image']['name'],
+                            'type' => $_FILES['map_image']['type'],
+                            'tmp_name' => $_FILES['map_image']['tmp_name'],
+                            'error' => $_FILES['map_image']['error'],
+                            'size' => $_FILES['map_image']['size']
+                        ];
+                        processFileUploadEdit($file, 'map', $fish_id, $upload_dir, $allowed_types, $max_size, $conn, true);
                     }
-                } catch (Exception $e) {
-                    $errors[] = $e->getMessage();
                 }
+                
+                // Commit the transaction
+                mysqli_commit($conn);
+                
+                $_SESSION['success_message'] = "Fish information updated successfully!";
+                header("Location: fish_details.php?id=" . $fish_id);
+                exit();
+            } catch (Exception $e) {
+                // Rollback transaction on error
+                mysqli_rollback($conn);
+                
+                $general_error = "Error: " . $e->getMessage();
             }
-            
-            if (empty($errors)) {
-                // Set success message and redirect
-                $redirect_path = $is_admin ? "fish_details.php?id=$fish_id" : "user/dashboard.php";
-                redirect($redirect_path, "Fish information updated successfully", 'success');
-            }
-        } else {
-            $general_error = "Error updating fish information: " . mysqli_error($conn);
         }
-    }
     }
 }
 
@@ -666,7 +687,7 @@ include 'includes/header.php';
                     
                     <div class="form-group">
                         <label for="dna_sequence">DNA Sequence</label>
-                        <textarea id="dna_sequence" name="dna_sequence" class="form-textarea" rows="6"><?php echo htmlspecialchars($fish['dna_sequence'] ?? ''); ?></textarea>
+                        <textarea id="dna_sequence" name="dna_sequence" class="form-textarea" rows="6"><?php echo $fish['dna_sequence'] ?? ''; ?></textarea>
                         <div class="form-hint">Enter the DNA sequence (A, T, G, C bases)</div>
                     </div>
                 </div>
@@ -743,7 +764,12 @@ include 'includes/header.php';
                                     <h5>Current Main Images:</h5>
                                     <div class="existing-image-grid">
                                         <?php foreach ($existing_images['main'] as $image): ?>
-                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Main Image" class="existing-image">
+                                            <div class="image-container">
+                                                <img src="<?php echo $image['image_path']; ?>" alt="Current Main Image" class="existing-image">
+                                                <a href="delete_image.php?id=<?php echo $image['id']; ?>&fish_id=<?php echo $fish_id; ?>" class="delete-image" onclick="return confirm('Are you sure you want to delete this image?');">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
@@ -760,7 +786,12 @@ include 'includes/header.php';
                                     <h5>Current Fish Images:</h5>
                                     <div class="existing-image-grid">
                                         <?php foreach ($existing_images['fish'] as $image): ?>
-                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Fish Image" class="existing-image">
+                                            <div class="image-container">
+                                                <img src="<?php echo $image['image_path']; ?>" alt="Current Fish Image" class="existing-image">
+                                                <a href="delete_image.php?id=<?php echo $image['id']; ?>&fish_id=<?php echo $fish_id; ?>" class="delete-image" onclick="return confirm('Are you sure you want to delete this image?');">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
@@ -777,7 +808,12 @@ include 'includes/header.php';
                                     <h5>Current Skeleton Images:</h5>
                                     <div class="existing-image-grid">
                                         <?php foreach ($existing_images['skeleton'] as $image): ?>
-                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Skeleton Image" class="existing-image">
+                                            <div class="image-container">
+                                                <img src="<?php echo $image['image_path']; ?>" alt="Current Skeleton Image" class="existing-image">
+                                                <a href="delete_image.php?id=<?php echo $image['id']; ?>&fish_id=<?php echo $fish_id; ?>" class="delete-image" onclick="return confirm('Are you sure you want to delete this image?');">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
@@ -794,7 +830,12 @@ include 'includes/header.php';
                                     <h5>Current Disease Images:</h5>
                                     <div class="existing-image-grid">
                                         <?php foreach ($existing_images['disease'] as $image): ?>
-                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Disease Image" class="existing-image">
+                                            <div class="image-container">
+                                                <img src="<?php echo $image['image_path']; ?>" alt="Current Disease Image" class="existing-image">
+                                                <a href="delete_image.php?id=<?php echo $image['id']; ?>&fish_id=<?php echo $fish_id; ?>" class="delete-image" onclick="return confirm('Are you sure you want to delete this image?');">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
@@ -811,7 +852,12 @@ include 'includes/header.php';
                                     <h5>Current Map Image:</h5>
                                     <div class="existing-image-grid">
                                         <?php foreach ($existing_images['map'] as $image): ?>
-                                            <img src="<?php echo $image['image_path']; ?>" alt="Current Map Image" class="existing-image">
+                                            <div class="image-container">
+                                                <img src="<?php echo $image['image_path']; ?>" alt="Current Map Image" class="existing-image">
+                                                <a href="delete_image.php?id=<?php echo $image['id']; ?>&fish_id=<?php echo $fish_id; ?>" class="delete-image" onclick="return confirm('Are you sure you want to delete this image?');">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>

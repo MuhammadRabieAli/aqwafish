@@ -348,13 +348,13 @@ include 'includes/header.php';
                                         <td>
                                             <div class="dna-sequence">
                                                 <div class="sequence-text" id="sequence-text">
-                                                    <?php echo htmlspecialchars($fish['dna_sequence']); ?>
+                                                    <?php echo $fish['dna_sequence']; ?>
                                                 </div>
                                                 <div class="sequence-actions">
-                                                    <button class="btn btn-sm btn-secondary copy-sequence" data-sequence="<?php echo htmlspecialchars($fish['dna_sequence']); ?>">
+                                                    <button class="btn btn-sm btn-secondary copy-sequence" data-sequence="<?php echo $fish['dna_sequence']; ?>">
                                                         <i class="fas fa-copy"></i> Copy
                                                     </button>
-                                                    <button class="btn btn-sm btn-info export-json" data-sequence="<?php echo htmlspecialchars($fish['dna_sequence']); ?>" 
+                                                    <button class="btn btn-sm btn-info export-json" data-sequence="<?php echo $fish['dna_sequence']; ?>" 
                                                             data-name="<?php echo htmlspecialchars($fish['scientific_name'] ?: $fish['name']); ?>"
                                                             data-id="<?php echo htmlspecialchars($fish['id']); ?>"
                                                             data-type="<?php echo htmlspecialchars($fish['sequence_type'] ?? 'DNA'); ?>"

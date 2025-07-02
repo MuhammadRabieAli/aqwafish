@@ -37,7 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $genome_type = sanitize($_POST['genome_type'] ?? '');
     $locus = sanitize($_POST['locus'] ?? '');
     $nucleotides_count = !empty($_POST['nucleotides_count']) ? intval($_POST['nucleotides_count']) : null;
-    $dna_sequence = sanitize($_POST['dna_sequence'] ?? '');
+    
+    // Special handling for DNA sequence - process directly without sanitize
+    $raw_dna = $_POST['dna_sequence'] ?? '';
+    if (!empty($raw_dna)) {
+        // Strip any non-ACGT characters and convert to uppercase
+        $dna_sequence = strtoupper(preg_replace('/[^ACGTacgt]/', '', $raw_dna));
+        
+        // Also update nucleotides count if we have a valid sequence
+        if (strlen($dna_sequence) > 0) {
+            $nucleotides_count = strlen($dna_sequence);
+        }
+    } else {
+        $dna_sequence = '';
+    }
     
     // Get collection fields
     $collection_country = sanitize($_POST['collection_country'] ?? '');
@@ -91,45 +104,81 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         mysqli_begin_transaction($conn);
         
         try {
-            // Insert fish data
-            $sql = "INSERT INTO fish (name, scientific_name, family, environment, size_category, description, submitted_by, status,
-                          process_id, sample_id, museum_id, collection_code, field_id, deposited_in, specimen_linkout,
-                          sequence_type, sequence_id, genbank_accession, sequence_updated_at, genome_type, locus, nucleotides_count, dna_sequence,
-                          collection_country, collection_region, collection_location, collection_date, collection_latitude, collection_longitude, collector_name) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            // Insert fish data using direct SQL instead of prepared statement
+            $insert_sql = "INSERT INTO fish (
+                          name, scientific_name, family, environment, size_category, description, 
+                          submitted_by, status, process_id, sample_id, museum_id, collection_code, 
+                          field_id, deposited_in, specimen_linkout, sequence_type, sequence_id, 
+                          genbank_accession, sequence_updated_at, genome_type, locus, nucleotides_count,
+                          dna_sequence, collection_country, collection_region, collection_location, 
+                          collection_date, collection_latitude, collection_longitude, collector_name
+                        ) VALUES (
+                          '" . mysqli_real_escape_string($conn, $name) . "',
+                          '" . mysqli_real_escape_string($conn, $scientific_name) . "',
+                          '" . mysqli_real_escape_string($conn, $family) . "',
+                          '" . mysqli_real_escape_string($conn, $environment) . "',
+                          '" . mysqli_real_escape_string($conn, $size_category) . "',
+                          '" . mysqli_real_escape_string($conn, $description) . "',
+                          " . (int)$user_id . ",
+                          'pending',
+                          '" . mysqli_real_escape_string($conn, $process_id) . "',
+                          '" . mysqli_real_escape_string($conn, $sample_id) . "',
+                          '" . mysqli_real_escape_string($conn, $museum_id) . "',
+                          '" . mysqli_real_escape_string($conn, $collection_code) . "',
+                          '" . mysqli_real_escape_string($conn, $field_id) . "',
+                          '" . mysqli_real_escape_string($conn, $deposited_in) . "',
+                          '" . mysqli_real_escape_string($conn, $specimen_linkout) . "',
+                          '" . mysqli_real_escape_string($conn, $sequence_type) . "',
+                          '" . mysqli_real_escape_string($conn, $sequence_id) . "',
+                          '" . mysqli_real_escape_string($conn, $genbank_accession) . "',";
             
-            // Verify that the user exists
-            $user_check_sql = "SELECT id FROM users WHERE id = ?";
-            $user_check_stmt = mysqli_prepare($conn, $user_check_sql);
-            if (!$user_check_stmt) {
-                throw new Exception("Error preparing user check statement: " . mysqli_error($conn));
+            // Handle date fields properly
+            if (!empty($sequence_updated_at)) {
+                $insert_sql .= " '" . mysqli_real_escape_string($conn, $sequence_updated_at) . "',";
+            } else {
+                $insert_sql .= " NULL,";
             }
             
-            mysqli_stmt_bind_param($user_check_stmt, 'i', $user_id);
-            mysqli_stmt_execute($user_check_stmt);
-            mysqli_stmt_store_result($user_check_stmt);
+            $insert_sql .= " '" . mysqli_real_escape_string($conn, $genome_type) . "',
+                          '" . mysqli_real_escape_string($conn, $locus) . "',";
             
-            if (mysqli_stmt_num_rows($user_check_stmt) === 0) {
-                throw new Exception("Error: User ID $user_id does not exist. Cannot submit fish.");
-            }
-            mysqli_stmt_close($user_check_stmt);
-            
-            // Prepare the statement
-            $stmt = mysqli_prepare($conn, $sql);
-            if (!$stmt) {
-                throw new Exception("Error preparing statement: " . mysqli_error($conn));
+            // Handle numeric fields properly
+            if ($nucleotides_count !== null) {
+                $insert_sql .= " " . (int)$nucleotides_count . ",";
+            } else {
+                $insert_sql .= " NULL,";
             }
             
-            // Bind parameters - we have 29 parameters (7 basic + 7 identifier + 8 sequence + 7 collection)
-            if (!mysqli_stmt_bind_param($stmt, 'ssssssissssssssssssssissssdds', 
-                $name, $scientific_name, $family, $environment, $size_category, $description, $user_id,
-                $process_id, $sample_id, $museum_id, $collection_code, $field_id, $deposited_in, $specimen_linkout,
-                $sequence_type, $sequence_id, $genbank_accession, $sequence_updated_at, $genome_type, $locus, $nucleotides_count, $dna_sequence,
-                $collection_country, $collection_region, $collection_location, $collection_date, $collection_latitude, $collection_longitude, $collector_name)) {
-                throw new Exception("Error binding parameters: " . mysqli_stmt_error($stmt));
+            // DNA sequence directly in the SQL
+            $insert_sql .= " '" . mysqli_real_escape_string($conn, $dna_sequence) . "',
+                          '" . mysqli_real_escape_string($conn, $collection_country) . "',
+                          '" . mysqli_real_escape_string($conn, $collection_region) . "',
+                          '" . mysqli_real_escape_string($conn, $collection_location) . "',";
+            
+            // Handle date fields properly
+            if (!empty($collection_date)) {
+                $insert_sql .= " '" . mysqli_real_escape_string($conn, $collection_date) . "',";
+            } else {
+                $insert_sql .= " NULL,";
             }
             
-            if (!mysqli_stmt_execute($stmt)) {
+            // Handle numeric fields properly
+            if ($collection_latitude !== null) {
+                $insert_sql .= " " . (float)$collection_latitude . ",";
+            } else {
+                $insert_sql .= " NULL,";
+            }
+            
+            if ($collection_longitude !== null) {
+                $insert_sql .= " " . (float)$collection_longitude . ",";
+            } else {
+                $insert_sql .= " NULL,";
+            }
+            
+            $insert_sql .= " '" . mysqli_real_escape_string($conn, $collector_name) . "'
+                        )";
+            
+            if (!mysqli_query($conn, $insert_sql)) {
                 throw new Exception("Error inserting fish data: " . mysqli_error($conn));
             }
             
@@ -143,14 +192,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 for ($i = 0; $i < count($dataset_codes); $i++) {
                     if (!empty($dataset_codes[$i]) && !empty($dataset_names[$i])) {
-                        $code = sanitize($dataset_codes[$i]);
-                        $name = sanitize($dataset_names[$i]);
-                        $url = !empty($dataset_urls[$i]) ? sanitize($dataset_urls[$i]) : null;
+                        $code = mysqli_real_escape_string($conn, sanitize($dataset_codes[$i]));
+                        $name = mysqli_real_escape_string($conn, sanitize($dataset_names[$i]));
+                        $url = !empty($dataset_urls[$i]) ? "'" . mysqli_real_escape_string($conn, sanitize($dataset_urls[$i])) . "'" : "NULL";
                         
-                        $dataset_sql = "INSERT INTO fish_datasets (fish_id, dataset_code, dataset_name, dataset_url) VALUES (?, ?, ?, ?)";
-                        $dataset_stmt = mysqli_prepare($conn, $dataset_sql);
-                        mysqli_stmt_bind_param($dataset_stmt, 'isss', $fish_id, $code, $name, $url);
-                        mysqli_stmt_execute($dataset_stmt);
+                        $dataset_sql = "INSERT INTO fish_datasets (fish_id, dataset_code, dataset_name, dataset_url) 
+                                      VALUES (" . (int)$fish_id . ", '" . $code . "', '" . $name . "', " . $url . ")";
+                        
+                        if (!mysqli_query($conn, $dataset_sql)) {
+                            throw new Exception("Error inserting dataset: " . mysqli_error($conn));
+                        }
                     }
                 }
             }
@@ -489,7 +540,7 @@ include 'includes/header.php';
                     
                     <div class="form-group">
                         <label for="dna_sequence">DNA Sequence</label>
-                        <textarea id="dna_sequence" name="dna_sequence" class="form-textarea" rows="6"><?php echo isset($dna_sequence) ? htmlspecialchars($dna_sequence) : ''; ?></textarea>
+                        <textarea id="dna_sequence" name="dna_sequence" class="form-textarea" rows="6"><?php echo isset($dna_sequence) ? $dna_sequence : ''; ?></textarea>
                         <div class="form-hint">Enter the DNA sequence (A, T, G, C bases)</div>
                     </div>
                 </div>

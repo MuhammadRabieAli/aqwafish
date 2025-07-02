@@ -74,5 +74,48 @@ function displayMessage() {
 // Function to sanitize input data
 function sanitize($data) {
     global $conn;
+    
+    // Debug log for DNA sequences
+    if (is_string($data) && strlen($data) > 100) {
+        error_log("Long string detected in sanitize: " . substr($data, 0, 50) . "...");
+        
+        // Check if this looks like a DNA sequence
+        if (is_dna_sequence($data)) {
+            error_log("DNA sequence identified: " . strlen($data) . " characters");
+            // For DNA sequences, just trim without any escaping
+            return process_dna_sequence($data);
+        }
+    }
+    
+    // For regular data, apply full sanitization
     return mysqli_real_escape_string($conn, htmlspecialchars(trim($data)));
+}
+
+// Function to check if a string is likely a DNA sequence
+function is_dna_sequence($str) {
+    // DNA sequences should be predominantly composed of A, C, G, T characters
+    // We'll be lenient and allow some non-ACGT characters (up to 5%)
+    if (!is_string($str) || strlen($str) < 20) {
+        return false;
+    }
+    
+    // Count ACGT characters
+    $acgt_count = preg_match_all('/[ACGTacgt]/', $str, $matches);
+    $total_length = strlen($str);
+    
+    // If more than 95% of characters are ACGT, it's likely a DNA sequence
+    return ($acgt_count / $total_length) > 0.95;
+}
+
+// Function to process DNA sequences
+function process_dna_sequence($sequence) {
+    // Remove any whitespace and non-DNA characters
+    $clean_sequence = preg_replace('/[^ACGTacgt]/', '', $sequence);
+    
+    // Convert to uppercase for consistency
+    $clean_sequence = strtoupper($clean_sequence);
+    
+    error_log("Processed DNA sequence: " . substr($clean_sequence, 0, 50) . "... (Length: " . strlen($clean_sequence) . ")");
+    
+    return $clean_sequence;
 } 
