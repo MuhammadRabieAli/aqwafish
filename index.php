@@ -87,6 +87,9 @@ include 'includes/header.php';
                     <input type="text" id="searchInput" name="search" placeholder="Search fish species..." class="search-input" 
                            value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
                     <button type="submit" class="search-btn" id="searchBtn"><i class="fas fa-search"></i></button>
+                    <?php if (isset($_GET['search']) && !empty($_GET['search'])): ?>
+                        <a href="index.php" class="go-back-btn" id="goBackBtn"><i class="fas fa-times"></i> Clear</a>
+                    <?php endif; ?>
                 </div>
             </form>
         </div>

@@ -118,6 +118,30 @@
     transform: scale(1.05);
 }
 
+.go-back-btn {
+    background: var(--danger-color, #dc3545);
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    color: white;
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    margin-left: var(--spacing-xs);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    transition: all var(--transition-fast);
+}
+
+.go-back-btn i {
+    margin-right: var(--spacing-xs);
+}
+
+.go-back-btn:hover {
+    background: var(--danger-hover, #c82333);
+    transform: scale(1.05);
+}
+
 /* Filters Section */
 .filters-section {
     background: var(--surface);
